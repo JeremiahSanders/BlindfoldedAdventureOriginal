@@ -5,8 +5,11 @@ public class PlayerMovement : MonoBehaviour {
     // Use this for initialization
     private void Start() {}
     // Update is called once per frame
+    private bool isMoving = false;
     private void Update()
     {
+        if (isMoving) return;
+        isMoving = true;
         float vert = Input.GetAxis("Vertical Player 1") * MovementSpeed;
         float hor = Input.GetAxis("Horizontal Player 1") * MovementSpeed;
         vert *= Time.deltaTime;
@@ -23,5 +26,6 @@ public class PlayerMovement : MonoBehaviour {
         {
             GameManager.instance.PlayerMove();
         }
+        isMoving = false;
     }
 }

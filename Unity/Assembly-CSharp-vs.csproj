@@ -50,6 +50,7 @@
      <Compile Include="Assets\Scripts\DeathZone.cs" />
      <Compile Include="Assets\Scripts\GameManager.cs" />
      <Compile Include="Assets\Scripts\PlayerMovement.cs" />
+     <Compile Include="Assets\Scripts\StopPlayerMovement.cs" />
  <Reference Include="Assembly-UnityScript-firstpass">
  <HintPath>C:/Users/bluja_000/Source/GitHub/BlindfoldedAdventure/Unity/Library/ScriptAssemblies/Assembly-UnityScript-firstpass.dll</HintPath>
  </Reference>
