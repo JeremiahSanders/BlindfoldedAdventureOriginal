@@ -7,7 +7,15 @@ public class GameManager : MonoBehaviour {
     public static GameManager instance;
     public GameObject FloorTilePrefab;
     public GameObject PlayerPrefab;
+    public AudioClip RequestUp;
+    public AudioClip RequestDown;
+    public AudioClip RequestLeft;
+    public AudioClip RequestRight;
 
+    public AudioClip AdvisePositive;
+    public AudioClip AdviseNegative;
+
+    private Vector3 origin = new Vector3(0f,0f,0f);
     private GameObject currentPlayerObject;
     private GameObject currentLevelObject;
     private List<PlayerMovement> playerMovements;
@@ -40,6 +48,43 @@ public class GameManager : MonoBehaviour {
     }
 
 
+    public void AdviseRight()
+    {
+        //ChangeDirection(PlayerMovement.MovementDirection.Right);
+    }
+    public void AdviseLeft()
+    {
+        //ChangeDirection(PlayerMovement.MovementDirection.Left);
+    }
+    public void AdviseDown()
+    {
+        //ChangeDirection(PlayerMovement.MovementDirection.Down);
+    }
+    public void AdviseUp()
+    {
+        //ChangeDirection(PlayerMovement.MovementDirection.Up);
+    }
+
+
+    public void AdviseYes()
+    {
+        DoAdvise(true);
+    }
+
+    public void AdviseNo()
+    {
+        DoAdvise(false);
+    }
+
+    private void DoAdvise(bool doIt)
+    {
+        if (CurrentPhase != TurnPhase.Advise) {
+            return;
+        }
+        AudioSource.PlayClipAtPoint(doIt ? AdvisePositive : AdviseNegative, origin);
+    }
+
+
     private void ChangeDirection(PlayerMovement.MovementDirection direction)
     {
         switch (CurrentPhase) {
@@ -47,11 +92,42 @@ public class GameManager : MonoBehaviour {
                 if (currentMovementRequest != null && currentMovementRequest.Direction == direction) {
                     return;
                 }
-                currentMovementRequest = new PlayerMovement {Direction = direction};
+                if (currentMovementRequest == null) {
+                    currentMovementRequest = new PlayerMovement {Direction = direction};
+                }
+                else {
+                    currentMovementRequest.Direction = direction; 
+                }
+                PlayCurrentRequestSound();
+                CurrentPhase = TurnPhase.Advise;
                 break;
             case TurnPhase.Advise:
                 break;
             case TurnPhase.PerformAction:
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
+
+    private void PlayCurrentRequestSound()
+    {
+        if (currentMovementRequest == null) {
+            return;
+        }
+        //TODO: prevent playing while other sounds are playing
+        switch (currentMovementRequest.Direction) {
+            case PlayerMovement.MovementDirection.Up:
+                AudioSource.PlayClipAtPoint(RequestUp, origin);
+                break;
+            case PlayerMovement.MovementDirection.Down:
+                AudioSource.PlayClipAtPoint(RequestDown, origin);
+                break;
+            case PlayerMovement.MovementDirection.Left:
+                AudioSource.PlayClipAtPoint(RequestLeft, origin);
+                break;
+            case PlayerMovement.MovementDirection.Right:
+                AudioSource.PlayClipAtPoint(RequestRight, origin);
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
@@ -68,7 +144,7 @@ public class GameManager : MonoBehaviour {
 
     public void Setup()
     {
-        currentPlayerObject = Instantiate(PlayerPrefab, new Vector3(0f, 0f, 0f), Quaternion.identity) as GameObject;
+        currentPlayerObject = Instantiate(PlayerPrefab, origin, Quaternion.identity) as GameObject;
         if (currentPlayerObject != null) {
             Renderer playerRenderer = currentPlayerObject.GetComponent<Renderer>();
             if (playerRenderer != null) {
@@ -110,6 +186,8 @@ public class GameManager : MonoBehaviour {
             yLoc = depth/2f;
         }
         currentLevelObject.transform.Translate(new Vector3(xLoc,yLoc,zLoc)); 
+
+        CurrentPhase = TurnPhase.ProposeAction;
     }
 
 	// Use this for initialization

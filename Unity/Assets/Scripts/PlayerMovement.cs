@@ -7,8 +7,8 @@ public class PlayerMovement : MonoBehaviour {
     // Update is called once per frame
     private void Update()
     {
-        float vert = Input.GetAxis("Vertical") * MovementSpeed;
-        float hor = Input.GetAxis("Horizontal") * MovementSpeed;
+        float vert = Input.GetAxis("Vertical Player 1") * MovementSpeed;
+        float hor = Input.GetAxis("Horizontal Player 1") * MovementSpeed;
         vert *= Time.deltaTime;
         hor *= Time.deltaTime;
         transform.Translate(hor, 0, vert);
