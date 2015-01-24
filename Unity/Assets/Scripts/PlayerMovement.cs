@@ -13,5 +13,10 @@ public class PlayerMovement : MonoBehaviour {
         hor *= Time.deltaTime;
         transform.Translate(hor, 0, vert);
         //transform.Rotate(0, rotation, 0);
+
+        if (hor > 0) { GameManager.instance.ProposeRight(); }
+        if (hor < 0) { GameManager.instance.ProposeLeft(); }
+        if (vert > 0) { GameManager.instance.ProposeUp(); }
+        if (vert < 0) { GameManager.instance.ProposeDown(); }
     }
 }

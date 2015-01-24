@@ -14,7 +14,49 @@ public class GameManager : MonoBehaviour {
 
     private PlayerMovement currentMovementRequest;
 
+    public TurnPhase CurrentPhase { get; private set; }
 
+    public enum TurnPhase {
+        ProposeAction = 1,
+        Advise = 2,
+        PerformAction = 3
+    }
+
+    public void ProposeRight()
+    {
+        ChangeDirection(PlayerMovement.MovementDirection.Right);
+    }
+    public void ProposeLeft()
+    {
+        ChangeDirection(PlayerMovement.MovementDirection.Left);
+    }
+    public void ProposeDown()
+    {
+        ChangeDirection(PlayerMovement.MovementDirection.Down);
+    }
+    public void ProposeUp()
+    {
+        ChangeDirection(PlayerMovement.MovementDirection.Up);
+    }
+
+
+    private void ChangeDirection(PlayerMovement.MovementDirection direction)
+    {
+        switch (CurrentPhase) {
+            case TurnPhase.ProposeAction:
+                if (currentMovementRequest != null && currentMovementRequest.Direction == direction) {
+                    return;
+                }
+                currentMovementRequest = new PlayerMovement {Direction = direction};
+                break;
+            case TurnPhase.Advise:
+                break;
+            case TurnPhase.PerformAction:
+                break;
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
 
     private void Awake()
     {
