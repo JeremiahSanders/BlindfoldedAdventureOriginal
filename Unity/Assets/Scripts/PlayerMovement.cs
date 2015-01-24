@@ -11,12 +11,17 @@ public class PlayerMovement : MonoBehaviour {
         float hor = Input.GetAxis("Horizontal Player 1") * MovementSpeed;
         vert *= Time.deltaTime;
         hor *= Time.deltaTime;
-        transform.Translate(hor, 0, vert);
+        //transform.Translate(hor, 0, vert);
         //transform.Rotate(0, rotation, 0);
 
-        if (hor > 0) { GameManager.instance.ProposeRight(); }
-        if (hor < 0) { GameManager.instance.ProposeLeft(); }
-        if (vert > 0) { GameManager.instance.ProposeUp(); }
-        if (vert < 0) { GameManager.instance.ProposeDown(); }
+        if (hor > 0) { GameManager.instance.PlayerRight(); }
+        if (hor < 0) { GameManager.instance.PlayerLeft(); }
+        if (vert > 0) { GameManager.instance.PlayerUp(); }
+        if (vert < 0) { GameManager.instance.PlayerDown(); }
+
+        if (Input.GetButton("Fire1"))
+        {
+            GameManager.instance.PlayerMove();
+        }
     }
 }

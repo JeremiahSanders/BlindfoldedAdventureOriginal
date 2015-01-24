@@ -24,6 +24,14 @@ public class AdvisorController : MonoBehaviour {
         if (hor < 0) { GameManager.instance.AdviseLeft(); }
         if (vert > 0) { GameManager.instance.AdviseUp(); }
         if (vert < 0) { GameManager.instance.AdviseDown(); }
-	
-	}
+
+
+        if (Input.GetButton("Fire1")) {
+            GameManager.instance.AdviseYes();
+        }
+        if (Input.GetButton("Fire2"))
+        {
+            GameManager.instance.AdviseNo();
+        }
+    }
 }

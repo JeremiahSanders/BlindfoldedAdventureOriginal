@@ -11,6 +11,9 @@ public class GameManager : MonoBehaviour {
     public AudioClip RequestDown;
     public AudioClip RequestLeft;
     public AudioClip RequestRight;
+    public int FreeTurns = 5;
+    public int TurnsBetweenTileDrop = 3;
+    public int Lives = 3;
 
     public AudioClip AdvisePositive;
     public AudioClip AdviseNegative;
@@ -19,7 +22,7 @@ public class GameManager : MonoBehaviour {
     private GameObject currentPlayerObject;
     private GameObject currentLevelObject;
     private List<PlayerMovement> playerMovements;
-
+    public int TurnNumber { get { return playerMovements == null ? 0 : playerMovements.Count + 1; } }
     private PlayerMovement currentMovementRequest;
 
     public TurnPhase CurrentPhase { get; private set; }
@@ -30,19 +33,19 @@ public class GameManager : MonoBehaviour {
         PerformAction = 3
     }
 
-    public void ProposeRight()
+    public void PlayerRight()
     {
         ChangeDirection(PlayerMovement.MovementDirection.Right);
     }
-    public void ProposeLeft()
+    public void PlayerLeft()
     {
         ChangeDirection(PlayerMovement.MovementDirection.Left);
     }
-    public void ProposeDown()
+    public void PlayerDown()
     {
         ChangeDirection(PlayerMovement.MovementDirection.Down);
     }
-    public void ProposeUp()
+    public void PlayerUp()
     {
         ChangeDirection(PlayerMovement.MovementDirection.Up);
     }
@@ -65,6 +68,15 @@ public class GameManager : MonoBehaviour {
         //ChangeDirection(PlayerMovement.MovementDirection.Up);
     }
 
+    private void DropTile()
+    {
+        if (currentLevelObject == null) { return;}
+        Transform[] childTransforms = currentLevelObject.GetComponentsInChildren<Transform>();
+        if (childTransforms == null || childTransforms.Length == 0) { return; }
+        int tileToDrop = UnityEngine.Random.Range(0, childTransforms.Length);
+        GameObject tileToDestroy = childTransforms[tileToDrop].gameObject;
+        Destroy(tileToDestroy);
+    }
 
     public void AdviseYes()
     {
@@ -81,7 +93,10 @@ public class GameManager : MonoBehaviour {
         if (CurrentPhase != TurnPhase.Advise) {
             return;
         }
+        if (currentMovementRequest.Advice.HasValue) { return;}
         AudioSource.PlayClipAtPoint(doIt ? AdvisePositive : AdviseNegative, origin);
+        currentMovementRequest.Advice = doIt;
+        CurrentPhase = TurnPhase.PerformAction;
     }
 
 
@@ -89,14 +104,14 @@ public class GameManager : MonoBehaviour {
     {
         switch (CurrentPhase) {
             case TurnPhase.ProposeAction:
-                if (currentMovementRequest != null && currentMovementRequest.Direction == direction) {
+                if (currentMovementRequest != null && currentMovementRequest.RequestDirection == direction) {
                     return;
                 }
                 if (currentMovementRequest == null) {
-                    currentMovementRequest = new PlayerMovement {Direction = direction};
+                    currentMovementRequest = new PlayerMovement {RequestDirection = direction};
                 }
                 else {
-                    currentMovementRequest.Direction = direction; 
+                    currentMovementRequest.RequestDirection = direction; 
                 }
                 PlayCurrentRequestSound();
                 CurrentPhase = TurnPhase.Advise;
@@ -104,10 +119,78 @@ public class GameManager : MonoBehaviour {
             case TurnPhase.Advise:
                 break;
             case TurnPhase.PerformAction:
+                currentMovementRequest.FinalDirection = direction;
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
         }
+    }
+
+    public void PlayerMove()
+    {
+        if (currentMovementRequest == null || currentMovementRequest.FinalDirection == null) {
+            return;
+        }
+        Rigidbody playerRigidbody = currentPlayerObject.GetComponent<Rigidbody>();
+        //float multiplier = 2f;
+        switch (currentMovementRequest.FinalDirection.Value) {
+            case PlayerMovement.MovementDirection.Up:
+                currentPlayerObject.transform.Translate(0f, 0f, 1f);
+                //playerRigidbody.AddForce(0f, 0f, 1f*multiplier); 
+                break;
+            case PlayerMovement.MovementDirection.Down:
+                currentPlayerObject.transform.Translate(0f, 0f, -1f);
+                //playerRigidbody.AddForce(0f, 0f, -1f*multiplier);
+                break;
+            case PlayerMovement.MovementDirection.Left:
+                currentPlayerObject.transform.Translate(-1f, 0f, 0f);
+                //playerRigidbody.AddForce(-1f*multiplier, 0f, 0f);
+                break;
+            case PlayerMovement.MovementDirection.Right:
+                currentPlayerObject.transform.Translate(1f, 0f, 0f);
+                //playerRigidbody.AddForce(1f*multiplier, 0f, 0f);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException("currentMovementRequest.FinalDirection");
+        }
+        RaycastHit hit;
+        playerRigidbody.SweepTest(new Vector3(0f, -50f, 0f), out hit, 50f);
+        if (hit.distance == 0f) {
+            // THERE'S NOTHING THERE!
+            playerRigidbody.isKinematic = false;
+        }
+        else {
+            AdvanceTurn(currentMovementRequest);
+        }
+    }
+
+    private void ResetLevel()
+    {
+        if (currentPlayerObject != null) { Destroy(currentPlayerObject);}
+        ResetPlayerObject();
+        playerMovements.Clear();
+        if (currentLevelObject != null) { Destroy(currentLevelObject);}
+        ResetLevelObject();
+    }
+
+    private void AdvanceTurn(PlayerMovement currentMovement)
+    {
+        if (currentMovement != null) {
+            playerMovements.Add(currentMovement);
+        }
+        currentMovementRequest = new PlayerMovement();
+        CurrentPhase = TurnPhase.ProposeAction;
+        int currentTurn = TurnNumber;
+        if (currentTurn <= FreeTurns) { return;}
+        currentTurn -= FreeTurns;
+        if (currentTurn > 0 && currentTurn % TurnsBetweenTileDrop == 0)
+            DropTile();
+    }
+
+    public void LoseLife()
+    {
+        Lives--;
+        ResetLevel();
     }
 
     private void PlayCurrentRequestSound()
@@ -116,7 +199,7 @@ public class GameManager : MonoBehaviour {
             return;
         }
         //TODO: prevent playing while other sounds are playing
-        switch (currentMovementRequest.Direction) {
+        switch (currentMovementRequest.RequestDirection) {
             case PlayerMovement.MovementDirection.Up:
                 AudioSource.PlayClipAtPoint(RequestUp, origin);
                 break;
@@ -144,21 +227,21 @@ public class GameManager : MonoBehaviour {
 
     public void Setup()
     {
-        currentPlayerObject = Instantiate(PlayerPrefab, origin, Quaternion.identity) as GameObject;
-        if (currentPlayerObject != null) {
-            Renderer playerRenderer = currentPlayerObject.GetComponent<Renderer>();
-            if (playerRenderer != null) {
-                float playerDepth = playerRenderer.bounds.max.y - playerRenderer.bounds.min.y;
-                currentPlayerObject.transform.Translate(new Vector3(0f, playerDepth + 2f, 0f));
-            }
-        }
+        ResetLevelObject();
+        ResetPlayerObject();
+        AdvanceTurn(null);
+    }
 
-        currentLevelObject = 
+    private void ResetLevelObject()
+    {
+        currentLevelObject =
             Instantiate(FloorTilePrefab,
                 //new Vector3(FloorTilePrefab.renderer.bounds.size.x/2f, 0f, FloorTilePrefab.renderer.bounds.size.z/2f),
-                new Vector3(0f,0f,0f), 
+                new Vector3(0f, 0f, 0f),
                 Quaternion.identity) as GameObject;
-        if (currentLevelObject == null) {return;}
+        if (currentLevelObject == null) {
+            return;
+        }
         Renderer[] renderers = currentLevelObject.GetComponentsInChildren<Renderer>();
         float minx = 0;
         float maxx = 0;
@@ -176,21 +259,36 @@ public class GameManager : MonoBehaviour {
         }
         float width = maxx - minx;
         float height = maxz - minz;
-        float xLoc = -1f * width / 2f;
-        float zLoc = -1f * height / 2f;
+        float xLoc = -1f*width/2f;
+        float zLoc = -1f*height/2f;
         float depth = maxy - miny;
         float yLoc = 0f;
         if (depth > 0f) {
-            yLoc = 0f - (depth/2f); }
+            yLoc = 0f - (depth/2f);
+        }
         if (depth < 0f) {
             yLoc = depth/2f;
         }
-        currentLevelObject.transform.Translate(new Vector3(xLoc,yLoc,zLoc)); 
-
-        CurrentPhase = TurnPhase.ProposeAction;
+        currentLevelObject.transform.Translate(new Vector3(xLoc, yLoc, zLoc));
     }
 
-	// Use this for initialization
+    private void ResetPlayerObject()
+    {
+        currentPlayerObject = Instantiate(PlayerPrefab, origin, Quaternion.identity) as GameObject;
+        if (currentPlayerObject != null) {
+            Renderer playerRenderer = currentPlayerObject.GetComponent<Renderer>();
+            if (playerRenderer != null) {
+                float playerDepth = playerRenderer.bounds.max.y - playerRenderer.bounds.min.y;
+                currentPlayerObject.transform.Translate(new Vector3(0f, playerDepth + 2f, 0f));
+            }
+            Rigidbody playerRigidbody = currentPlayerObject.GetComponent<Rigidbody>();
+            if (playerRigidbody != null) {
+                playerRigidbody.isKinematic = true;
+            }
+        }
+    }
+
+    // Use this for initialization
 	void Start () {
 	
 	}
@@ -202,6 +300,9 @@ public class GameManager : MonoBehaviour {
 
     internal class PlayerMovement {
         public enum MovementDirection { Up,Down,Left,Right}
-        public MovementDirection Direction { get; set; }
+        public MovementDirection? RequestDirection { get; set; }
+        public bool? Advice { get; set; }
+        public MovementDirection? AdviceDirection { get; set; }
+        public MovementDirection? FinalDirection { get; set; }
     }
 }
