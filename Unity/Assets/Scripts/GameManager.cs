@@ -2,13 +2,16 @@
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine.UI;
 
 public class GameManager : MonoBehaviour {
     public static GameManager instance;
     public Text LivesText;
-    public GameObject FloorTilePrefab;
+    public Text TileDisappearsText;
+    public GameObject LevelPrefab;
     public GameObject PlayerPrefab;
+    public GameObject FloorTilePrefab;
     public AudioClip RequestUp;
     public AudioClip RequestDown;
     public AudioClip RequestLeft;
@@ -26,6 +29,19 @@ public class GameManager : MonoBehaviour {
     private List<PlayerMovement> playerMovements;
     public int TurnNumber { get { return playerMovements == null ? 0 : playerMovements.Count + 1; } }
     private PlayerMovement currentMovementRequest;
+
+    public bool PlayerCanSubmitMove
+    {
+        get
+        {
+            return currentMovementRequest != null
+                   &&
+                   (!currentMovementRequest.RequestDirection.HasValue
+                    || (currentMovementRequest.Advice.HasValue && !currentMovementRequest.FinalDirection.HasValue)
+                       )
+                ;
+        }
+    }
 
     public TurnPhase CurrentPhase { get; private set; }
 
@@ -72,11 +88,10 @@ public class GameManager : MonoBehaviour {
 
     private void DropTile()
     {
-        if (currentLevelObject == null) { return;}
-        Transform[] childTransforms = currentLevelObject.GetComponentsInChildren<Transform>();
-        if (childTransforms == null || childTransforms.Length == 0) { return; }
-        int tileToDrop = UnityEngine.Random.Range(0, childTransforms.Length);
-        GameObject tileToDestroy = childTransforms[tileToDrop].gameObject;
+        if (currentTileCollection == null) { return;}
+        if (currentTileCollection.Count == 0) { return; }
+        int tileToDrop = UnityEngine.Random.Range(0, currentTileCollection.Count);
+        GameObject tileToDestroy = currentTileCollection.ElementAt(tileToDrop).Value.gameObject;
         Destroy(tileToDestroy);
     }
 
@@ -181,8 +196,27 @@ public class GameManager : MonoBehaviour {
             // THERE'S NOTHING THERE!
             FallOff();
         }
+        UpdateTileDisappearsText();
     }
 
+    private void UpdateTileDisappearsText()
+    {
+        if (TileDisappearsText != null) {
+            int disappearsIn = NextTileDisappears;
+            TileDisappearsText.text = disappearsIn == 0
+                ? "Tile disappears this turn"
+                : String.Format("Next tile disappears in {0} turns", disappearsIn);
+        }
+    }
+    private int NextTileDisappears
+    {
+        get
+        {
+            if (TurnNumber == 0) return 0;
+            if (TurnNumber < FreeTurns) return FreeTurns - TurnNumber;
+            return ((TurnNumber - FreeTurns) % TurnsBetweenTileDrop);
+        }
+    }
     public void StopPlayerMovement()
     {
         Rigidbody playerRigidbody = currentPlayerObject.GetComponent<Rigidbody>();
@@ -205,10 +239,7 @@ public class GameManager : MonoBehaviour {
         }
         currentMovementRequest = new PlayerMovement();
         CurrentPhase = TurnPhase.ProposeAction;
-        int currentTurn = TurnNumber;
-        if (currentTurn <= FreeTurns) { return;}
-        currentTurn -= FreeTurns;
-        if (currentTurn > 0 && currentTurn % TurnsBetweenTileDrop == 0)
+        if (TurnNumber > 0 && NextTileDisappears == 0)
             DropTile();
     }
 
@@ -252,7 +283,15 @@ public class GameManager : MonoBehaviour {
         }
     }
 
-    private void Awake()
+    public void CancelDirection()
+    {
+        if (currentMovementRequest == null)return;
+        if (currentMovementRequest.RequestDirection.HasValue && CurrentPhase == TurnPhase.ProposeAction)
+            currentMovementRequest.RequestDirection = null;
+        if (CurrentPhase == TurnPhase.PerformAction && currentMovementRequest.FinalDirection.HasValue)
+            currentMovementRequest.FinalDirection = null;
+    }
+    public void Awake()
     {
         if (instance == null) instance = this;
         else{ if(instance != this)Destroy(gameObject);}
@@ -266,6 +305,7 @@ public class GameManager : MonoBehaviour {
         ResetPlayerObject();
         AdvanceTurn(null);
         UpdateLivesText();
+        UpdateTileDisappearsText();
     }
 
     private void UpdateLivesText()
@@ -277,42 +317,43 @@ public class GameManager : MonoBehaviour {
 
     private void ResetLevelObject()
     {
-        currentLevelObject =
-            Instantiate(FloorTilePrefab,
-                //new Vector3(FloorTilePrefab.renderer.bounds.size.x/2f, 0f, FloorTilePrefab.renderer.bounds.size.z/2f),
-                new Vector3(0f, 0f, 0f),
-                Quaternion.identity) as GameObject;
-        if (currentLevelObject == null) {
-            return;
-        }
-        Renderer[] renderers = currentLevelObject.GetComponentsInChildren<Renderer>();
-        float minx = 0;
-        float maxx = 0;
-        float minz = 0;
-        float maxz = 0;
-        float miny = 0f;
-        float maxy = 0f;
-        foreach (Renderer r in renderers) {
-            minx = Math.Min(r.bounds.center.x, minx);
-            maxx = Math.Max(r.bounds.center.x, maxx);
-            minz = Math.Min(r.bounds.center.z, minz);
-            maxz = Math.Max(r.bounds.center.z, maxz);
-            miny = Math.Min(r.bounds.min.y, miny);
-            maxy = Math.Max(r.bounds.max.y, maxy);
-        }
-        float width = maxx - minx;
-        float height = maxz - minz;
-        float xLoc = -1f*width/2f;
-        float zLoc = -1f*height/2f;
-        float depth = maxy - miny;
-        float yLoc = 0f;
-        if (depth > 0f) {
-            yLoc = 0f - (depth/2f);
-        }
-        if (depth < 0f) {
-            yLoc = depth/2f;
-        }
-        currentLevelObject.transform.Translate(new Vector3(xLoc, yLoc, zLoc));
+        //currentLevelObject =
+        //    Instantiate(LevelPrefab,
+        //        new Vector3(0f, 0f, 0f),
+        //        Quaternion.identity) as GameObject;
+        //if (currentLevelObject == null) {
+        //    return;
+        //}
+        //Renderer[] renderers = currentLevelObject.GetComponentsInChildren<Renderer>();
+        //float minx = 0;
+        //float maxx = 0;
+        //float minz = 0;
+        //float maxz = 0;
+        //float miny = 0f;
+        //float maxy = 0f;
+        //foreach (Renderer r in renderers) {
+        //    minx = Math.Min(r.bounds.center.x, minx);
+        //    maxx = Math.Max(r.bounds.center.x, maxx);
+        //    minz = Math.Min(r.bounds.center.z, minz);
+        //    maxz = Math.Max(r.bounds.center.z, maxz);
+        //    miny = Math.Min(r.bounds.min.y, miny);
+        //    maxy = Math.Max(r.bounds.max.y, maxy);
+        //}
+        //float width = maxx - minx;
+        //float height = maxz - minz;
+        //float xLoc = -1f*width/2f;
+        //float zLoc = -1f*height/2f;
+        //float depth = maxy - miny;
+        //float yLoc = 0f;
+        //if (depth > 0f) {
+        //    yLoc = 0f - (depth/2f);
+        //}
+        //if (depth < 0f) {
+        //    yLoc = depth/2f;
+        //}
+        //currentLevelObject.transform.Translate(new Vector3(xLoc, yLoc, zLoc));
+
+        currentTileCollection = GenerateLevel(5, 5);
     }
 
     private void ResetPlayerObject()
@@ -336,6 +377,39 @@ public class GameManager : MonoBehaviour {
 	void Update () {
 	
 	}
+
+    private readonly Vector3 tileScale = new Vector3(1f, 1f, 1f);
+    private Dictionary<XYPoint, GameObject> currentTileCollection;
+
+    private Dictionary<XYPoint, GameObject> GenerateLevel(int width, int height)
+    {
+        float middleX = (float) width/2f;
+        float middleY = (float) height/2f;
+        Dictionary<XYPoint, GameObject> level = new Dictionary<XYPoint, GameObject>();
+        for (int x = 0; x < width; x++) {
+            for (int y = 0; y < height; y++) {
+                GameObject tile = Instantiate(FloorTilePrefab, origin, Quaternion.identity) as GameObject;
+                float destinationX = (((float)x + 1f) < middleX) ? 0 - x : x - middleX;
+                float destinationY = (((float)y + 1f) < middleY) ? 0 - y : y - middleY;
+                Vector3 destination = new Vector3(destinationX, 0f, destinationY);
+                tile.transform.Translate(destination, Space.World);
+                tile.transform.localScale = tileScale;
+                level[new XYPoint(x, y)] = tile;
+            }
+        }
+        return level;
+    }
+
+    internal class XYPoint {
+        public XYPoint(int x, int y)
+        {
+            X = x;
+            Y = y;
+        }
+
+        public int X { get; private set; }
+        public int Y { get; private set; }
+    }
 
     internal class PlayerMovement {
         public MovementDirection? RequestDirection { get; set; }
