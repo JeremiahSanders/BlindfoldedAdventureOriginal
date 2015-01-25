@@ -12,6 +12,8 @@ public class GameManager : MonoBehaviour {
     public GameObject LevelPrefab;
     public GameObject PlayerPrefab;
     public GameObject FloorTilePrefab;
+    public GameObject GameOverHUD;
+    public GameObject YouWinHUD;
     public AudioClip RequestUp;
     public AudioClip RequestDown;
     public AudioClip RequestLeft;
@@ -19,6 +21,8 @@ public class GameManager : MonoBehaviour {
     public int FreeTurns = 5;
     public int TurnsBetweenTileDrop = 3;
     public int Lives = 3;
+    public int SecondsPerTileDrop = 3;
+    private float tileCountdown = 0f;
 
     public AudioClip AdvisePositive;
     public AudioClip AdviseNegative;
@@ -51,22 +55,22 @@ public class GameManager : MonoBehaviour {
         PerformAction = 3
     }
 
-    public void PlayerRight()
-    {
-        ChangeDirection(MovementDirection.Right);
-    }
-    public void PlayerLeft()
-    {
-        ChangeDirection(MovementDirection.Left);
-    }
-    public void PlayerDown()
-    {
-        ChangeDirection(MovementDirection.Down);
-    }
-    public void PlayerUp()
-    {
-        ChangeDirection(MovementDirection.Up);
-    }
+    //public void PlayerRight()
+    //{
+    //    ChangeDirection(MovementDirection.Right);
+    //}
+    //public void PlayerLeft()
+    //{
+    //    ChangeDirection(MovementDirection.Left);
+    //}
+    //public void PlayerDown()
+    //{
+    //    ChangeDirection(MovementDirection.Down);
+    //}
+    //public void PlayerUp()
+    //{
+    //    ChangeDirection(MovementDirection.Up);
+    //}
 
 
     public void AdviseRight()
@@ -116,34 +120,34 @@ public class GameManager : MonoBehaviour {
         CurrentPhase = TurnPhase.PerformAction;
     }
      
-    private void ChangeDirection(MovementDirection direction)
-    {
-        LogCurrentRequest(currentMovementRequest);
-        switch (CurrentPhase) {
-            case TurnPhase.ProposeAction:
-                if (currentMovementRequest != null && currentMovementRequest.RequestDirection == direction) {
-                    return;
-                }
-                if (currentMovementRequest == null) {
-                    currentMovementRequest = new PlayerMovement {RequestDirection = direction};
-                }
-                else {
-                    currentMovementRequest.RequestDirection = direction;
-                }
-                PlayCurrentRequestSound();
-                CurrentPhase = TurnPhase.Advise;
-                break;
-            case TurnPhase.Advise:
-                break;
-            case TurnPhase.PerformAction:
-                if (currentMovementRequest != null) {
-                    currentMovementRequest.FinalDirection = direction;
-                }
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
-    }
+    //private void ChangeDirection(MovementDirection direction)
+    //{
+    //    LogCurrentRequest(currentMovementRequest);
+    //    switch (CurrentPhase) {
+    //        case TurnPhase.ProposeAction:
+    //            if (currentMovementRequest != null && currentMovementRequest.RequestDirection == direction) {
+    //                return;
+    //            }
+    //            if (currentMovementRequest == null) {
+    //                currentMovementRequest = new PlayerMovement {RequestDirection = direction};
+    //            }
+    //            else {
+    //                currentMovementRequest.RequestDirection = direction;
+    //            }
+    //            PlayCurrentRequestSound();
+    //            CurrentPhase = TurnPhase.Advise;
+    //            break;
+    //        case TurnPhase.Advise:
+    //            break;
+    //        case TurnPhase.PerformAction:
+    //            if (currentMovementRequest != null) {
+    //                currentMovementRequest.FinalDirection = direction;
+    //            }
+    //            break;
+    //        default:
+    //            throw new ArgumentOutOfRangeException();
+    //    }
+    //}
 
     private void LogCurrentRequest(PlayerMovement playerMovement)
     {
@@ -164,40 +168,40 @@ public class GameManager : MonoBehaviour {
         Debug.Log(toPrint);
     }
 
-    public void PlayerMove()
-    {
-        if (currentMovementRequest == null || currentMovementRequest.FinalDirection == null) {
-            return;
-        }
-        switch (currentMovementRequest.FinalDirection.Value) {
-            case MovementDirection.Up:
-                currentPlayerObject.transform.Translate(0f, 0f, 1f);
-                break;
-            case MovementDirection.Down:
-                currentPlayerObject.transform.Translate(0f, 0f, -1f);
-                break;
-            case MovementDirection.Left:
-                currentPlayerObject.transform.Translate(-1f, 0f, 0f);
-                break;
-            case MovementDirection.Right:
-                currentPlayerObject.transform.Translate(1f, 0f, 0f);
-                break;
-            default:
-                throw new ArgumentOutOfRangeException("currentMovementRequest.FinalDirection");
-        }
-        Rigidbody playerRigidbody = currentPlayerObject.GetComponent<Rigidbody>();
-        RaycastHit hit;
-        playerRigidbody.SweepTest(new Vector3(0f, -50f, 0f), out hit, 50f);
-        Debug.Log("Distance to obj: " + hit.distance.ToString());
-        if (hit.distance < 0.1f) {
-            AdvanceTurn(currentMovementRequest);
-        }
-        else {
-            // THERE'S NOTHING THERE!
-            FallOff();
-        }
-        UpdateTileDisappearsText();
-    }
+    //public void PlayerMove()
+    //{
+    //    if (currentMovementRequest == null || currentMovementRequest.FinalDirection == null) {
+    //        return;
+    //    }
+    //    switch (currentMovementRequest.FinalDirection.Value) {
+    //        case MovementDirection.Up:
+    //            currentPlayerObject.transform.Translate(0f, 0f, 1f);
+    //            break;
+    //        case MovementDirection.Down:
+    //            currentPlayerObject.transform.Translate(0f, 0f, -1f);
+    //            break;
+    //        case MovementDirection.Left:
+    //            currentPlayerObject.transform.Translate(-1f, 0f, 0f);
+    //            break;
+    //        case MovementDirection.Right:
+    //            currentPlayerObject.transform.Translate(1f, 0f, 0f);
+    //            break;
+    //        default:
+    //            throw new ArgumentOutOfRangeException("currentMovementRequest.FinalDirection");
+    //    }
+    //    Rigidbody playerRigidbody = currentPlayerObject.GetComponent<Rigidbody>();
+    //    RaycastHit hit;
+    //    playerRigidbody.SweepTest(new Vector3(0f, -50f, 0f), out hit, 50f);
+    //    Debug.Log("Distance to obj: " + hit.distance.ToString());
+    //    if (hit.distance < 0.1f) {
+    //        AdvanceTurn(currentMovementRequest);
+    //    }
+    //    else {
+    //        // THERE'S NOTHING THERE!
+    //        FallOff();
+    //    }
+    //    UpdateTileDisappearsText();
+    //}
 
     private void UpdateTileDisappearsText()
     {
@@ -205,7 +209,7 @@ public class GameManager : MonoBehaviour {
             int disappearsIn = NextTileDisappears;
             TileDisappearsText.text = disappearsIn == 0
                 ? "Tile disappears this turn"
-                : String.Format("Next tile disappears in {0} turns", disappearsIn);
+                : String.Format("Next tile disappears in {0:F1} seconds", tileCountdown);
         }
     }
     private int NextTileDisappears
@@ -219,44 +223,63 @@ public class GameManager : MonoBehaviour {
     }
     public void StopPlayerMovement()
     {
-        Rigidbody playerRigidbody = currentPlayerObject.GetComponent<Rigidbody>();
-        playerRigidbody.isKinematic = true;
+        //Rigidbody playerRigidbody = currentPlayerObject.GetComponent<Rigidbody>();
+        //playerRigidbody.isKinematic = true;
     }
     private void ResetLevel()
     {
         if (currentPlayerObject != null) { Destroy(currentPlayerObject);}
         ResetPlayerObject();
         playerMovements.Clear();
-        if (currentLevelObject != null) { Destroy(currentLevelObject);}
+        if (currentLevelObject != null) {
+            Destroy(currentLevelObject);
+        }
+        if (currentTileCollection != null)
+        {
+            foreach (var o in currentTileCollection)
+            {
+                Destroy(o.Value);
+            }
+            currentTileCollection.Clear();
+        }
         ResetLevelObject();
+        tileCountdown = SecondsPerTileDrop;
         if (currentMovementRequest == null) {currentMovementRequest = new PlayerMovement();}
     }
 
-    private void AdvanceTurn(PlayerMovement currentMovement)
-    {
-        if (currentMovement != null) {
-            playerMovements.Add(currentMovement);
-        }
-        currentMovementRequest = new PlayerMovement();
-        CurrentPhase = TurnPhase.ProposeAction;
-        if (TurnNumber > 0 && NextTileDisappears == 0)
-            DropTile();
-    }
+    //private void AdvanceTurn(PlayerMovement currentMovement)
+    //{
+    //    if (currentMovement != null) {
+    //        playerMovements.Add(currentMovement);
+    //    }
+    //    currentMovementRequest = new PlayerMovement();
+    //    CurrentPhase = TurnPhase.ProposeAction;
+    //    if (TurnNumber > 0 && NextTileDisappears == 0)
+    //        DropTile();
+    //}
 
-    private void FallOff()
-    {
-        Debug.Log("Falloff was triggered");
-        Rigidbody playerRigidbody = currentPlayerObject.GetComponent<Rigidbody>();
-        playerRigidbody.isKinematic = false;
-        playerMovements.Add(currentMovementRequest);
-        currentMovementRequest = null;
-    }
+    //private void FallOff()
+    //{
+    //    Debug.Log("Falloff was triggered");
+    //    Rigidbody playerRigidbody = currentPlayerObject.GetComponent<Rigidbody>();
+    //    playerRigidbody.isKinematic = false;
+    //    playerMovements.Add(currentMovementRequest);
+    //    currentMovementRequest = null;
+    //}
 
     public void LoseLife()
     {
         Lives--;
-        UpdateLivesText();
-        ResetLevel();
+        if (Lives > 0) {
+            UpdateLivesText();
+            ResetLevel();
+        }
+        else {
+            CountdownActive = false;
+            if (GameOverHUD != null)
+                GameOverHUD.SetActive(true);
+            LivesText.gameObject.SetActive(false);
+        }
     }
 
     private void PlayCurrentRequestSound()
@@ -295,17 +318,18 @@ public class GameManager : MonoBehaviour {
     {
         if (instance == null) instance = this;
         else{ if(instance != this)Destroy(gameObject);}
-        if (playerMovements == null) playerMovements = new List<PlayerMovement>();
         Setup();
     }
 
     public void Setup()
     {
+        if (playerMovements == null) playerMovements = new List<PlayerMovement>();
         ResetLevelObject();
         ResetPlayerObject();
-        AdvanceTurn(null);
+        CountdownActive = true;
         UpdateLivesText();
         UpdateTileDisappearsText();
+
     }
 
     private void UpdateLivesText()
@@ -317,42 +341,6 @@ public class GameManager : MonoBehaviour {
 
     private void ResetLevelObject()
     {
-        //currentLevelObject =
-        //    Instantiate(LevelPrefab,
-        //        new Vector3(0f, 0f, 0f),
-        //        Quaternion.identity) as GameObject;
-        //if (currentLevelObject == null) {
-        //    return;
-        //}
-        //Renderer[] renderers = currentLevelObject.GetComponentsInChildren<Renderer>();
-        //float minx = 0;
-        //float maxx = 0;
-        //float minz = 0;
-        //float maxz = 0;
-        //float miny = 0f;
-        //float maxy = 0f;
-        //foreach (Renderer r in renderers) {
-        //    minx = Math.Min(r.bounds.center.x, minx);
-        //    maxx = Math.Max(r.bounds.center.x, maxx);
-        //    minz = Math.Min(r.bounds.center.z, minz);
-        //    maxz = Math.Max(r.bounds.center.z, maxz);
-        //    miny = Math.Min(r.bounds.min.y, miny);
-        //    maxy = Math.Max(r.bounds.max.y, maxy);
-        //}
-        //float width = maxx - minx;
-        //float height = maxz - minz;
-        //float xLoc = -1f*width/2f;
-        //float zLoc = -1f*height/2f;
-        //float depth = maxy - miny;
-        //float yLoc = 0f;
-        //if (depth > 0f) {
-        //    yLoc = 0f - (depth/2f);
-        //}
-        //if (depth < 0f) {
-        //    yLoc = depth/2f;
-        //}
-        //currentLevelObject.transform.Translate(new Vector3(xLoc, yLoc, zLoc));
-
         currentTileCollection = GenerateLevel(5, 5);
     }
 
@@ -363,7 +351,7 @@ public class GameManager : MonoBehaviour {
             Renderer playerRenderer = currentPlayerObject.GetComponent<Renderer>();
             if (playerRenderer != null) {
                 float playerDepth = playerRenderer.bounds.max.y - playerRenderer.bounds.min.y;
-                currentPlayerObject.transform.Translate(new Vector3(0f, playerDepth + 5f, 0f));
+                currentPlayerObject.transform.Translate(new Vector3(0f, playerDepth + 2f, 0f));
             }
         }
     }
@@ -374,9 +362,33 @@ public class GameManager : MonoBehaviour {
 	}
 	
 	// Update is called once per frame
-	void Update () {
-	
+	void Update ()
+	{
+        if (!CountdownActive) return;
+	    tileCountdown -= Time.deltaTime;
+        UpdateTileDisappearsText();
+	    if (tileCountdown <= 0f) {
+	        DropTile();
+	        tileCountdown = (float) SecondsPerTileDrop;
+	    }
 	}
+
+    private bool _countdownActive = true;
+
+    private bool CountdownActive
+    {
+        get
+        {
+            return _countdownActive;
+        }
+        set
+        {
+            _countdownActive = value;
+            if (_countdownActive)
+                tileCountdown = SecondsPerTileDrop;
+            TileDisappearsText.gameObject.SetActive(_countdownActive);
+        }
+    }
 
     private readonly Vector3 tileScale = new Vector3(1f, 1f, 1f);
     private Dictionary<XYPoint, GameObject> currentTileCollection;
